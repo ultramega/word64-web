@@ -1,1 +1,97 @@
-<template name="GamePage"></template>
+<template name="GamePage">
+    <div class="row">
+        <div class="col-md-8">
+            <div id="game-container">
+                <canvas id="canvas"></canvas>
+                {{#unless isGameStarted}}
+                    <button id="start-game" class="btn btn-primary">Start Game</button>
+                {{/unless}}
+            </div>
+        </div>
+        <div class="col-md-4">
+            <span class="timer">{{timer}}</span>
+            <button id="pause-game" class="btn btn-primary btn-sm {{pauseButtonStatus}}" aria-label="Pause"><span class="glyphicon glyphicon-pause"></span></button>
+            <span class="game-score pull-right">{{currentScore}}</span>
+            <div>Word History</div>
+            <div class="list-group" id="word-history">
+                {{#each wordHistory}}
+                    <a href="#" class="list-group-item">{{word}} <span class="badge">{{score}}</span></a>
+                {{else}}
+                    <p class="text-center"><i>No words played</i></p>
+                {{/each}}
+            </div>
+            <div class="container-fluid" id="game-controls">
+                <div class="row">
+                    <div id="current-word">
+                        {{currentWord}}
+                        <a href="#" class="btn btn-danger btn-xs {{clearButtonStatus}}" aria-label="Clear Word"><span aria-hidden="true">&times;</span></a>
+                    </div>
+                </div>
+                <div class="row">
+                    <button id="submit-word" class="col-sm-6 btn btn-primary" {{submitButtonStatus}}>Play Word</button>
+                    <div class="col-sm-6" id="word-score">{{{currentWordScore}}}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal fade" id="dictionary-modal" tabindex="-1" role="dialog" aria-labelledby="dictionary-title">
+        <div class="modal-dialog modal-lg" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                    <h4 class="modal-title" id="dictionary-title">Dictionary</h4>
+                </div>
+                <div class="modal-body">
+                    <iframe src="" frameborder="0" id="dictionary-frame"></iframe>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal fade" id="endgame-modal" tabindex="-1" role="dialog" aria-labelledby="endgame-title">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h4 class="modal-title" id="endgame-title">Game Over</h4>
+                </div>
+                <div class="modal-body">
+                    <div class="container-fluid">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <table class="table table-condensed text-center">
+                                    <thead>
+                                        <tr>
+                                            <th class="text-center">Total points</th>
+                                            <th class="text-center">Words played</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td>{{totalPoints}}</td>
+                                            <td>{{wordsPlayed}}</td>
+                                        </tr>
+                                    </tbody>
+                                    <thead>
+                                        <tr>
+                                            <th colspan="2" class="text-center">Best word</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td colspan="2">{{bestWord}}</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="list-group">
+                                    <button class="list-group-item" id="new-game-button"><span class="glyphicon glyphicon-play"></span> New Game</button>
+                                    <button class="list-group-item" id="replay-game-button"><span class="glyphicon glyphicon-repeat"></span> Replay Game</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</template>
