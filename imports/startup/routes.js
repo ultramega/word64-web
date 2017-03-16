@@ -21,10 +21,3 @@ FlowRouter.route('/stats', {
         BlazeLayout.render('MainLayout', {main: 'StatsPage'});
     },
 });
-
-FlowRouter.route('/settings', {
-    name: 'settings',
-    action() {
-        BlazeLayout.render('MainLayout', {main: 'SettingsPage'});
-    },
-});

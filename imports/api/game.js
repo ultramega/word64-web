@@ -1,6 +1,5 @@
 import { Meteor } from 'meteor/meteor';
 import { Mongo } from 'meteor/mongo';
-import { AccountsGuest } from 'meteor/artwells:accounts-guest';
 
 import SimpleSchema from 'simpl-schema';
 
