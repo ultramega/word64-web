@@ -32,7 +32,7 @@ Template.GamePage.onCreated(function() {
     Meteor.subscribe('gameSession');
 
     Tracker.autorun(() => {
-        const gameState = GameSessions.findOne({}, {words: 1});
+        const gameState = GameSessions.findOne({}, {fields: {words: 1}});
         if(gameState) {
             const wordList = [];
             let score = 0;
@@ -47,7 +47,7 @@ Template.GamePage.onCreated(function() {
     });
 
     Tracker.autorun(() => {
-        const gameState = GameSessions.findOne({}, {status: 1});
+        const gameState = GameSessions.findOne({}, {fields: {status: 1}});
         gameState && this.gameStatus.set(gameState.status);
     });
 });
