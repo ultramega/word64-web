@@ -64,9 +64,13 @@ GameSessions.attachSchema(new SimpleSchema({
         min: 0,
         defaultValue: 180000,
     },
-    startTime: {
+    previousTick: {
         type: SimpleSchema.Integer,
-        autoValue: Date.now,
+        autoValue: function() {
+            if(!this.isSet && (!this.isUpdate || this.field('status').value == 'running')) {
+                return Date.now();
+            }
+        },
     },
     seed: SimpleSchema.Integer,
     tilesPlayed: {
@@ -87,6 +91,18 @@ if(Meteor.isServer) {
             tilesPlayed: 1,
         });
     });
+
+    const globalTick = function() {
+        GameSessions.find({status: 'running'}, {previousTick: 1}).forEach(function(doc) {
+            console.log(doc);
+            GameSessions.update(doc._id, {
+                $inc: {timeLeft: -(Date.now() - doc.previousTick)},
+                $set: {previousTick: Date.now()},
+            });
+        });
+        Meteor.setTimeout(globalTick, 1000);
+    };
+    globalTick();
 }
 
 export const PlayResult = new ReactiveVar(null);
@@ -135,28 +151,10 @@ Meteor.methods({
         }
 
         if(isPaused) {
-            GameSessions.update({_id: gameState._id}, {
-                $set: {status: 'paused'},
-                $inc: {timeLeft: -(Date.now() - gameState.startTime)},
-            });
+            GameSessions.update({_id: gameState._id}, {$set: {status: 'paused'}});
         } else {
             GameSessions.update({_id: gameState._id}, {$set: {status: 'running'}});
         }
-    },
-    'game.sync'() {
-        const gameState = GameSessions.findOne({userId: this.userId}, {
-            status: 1,
-            startTime: 1,
-        });
-        if(!gameState) {
-            throw new Meteor.Error('invalid-game');
-        }
-
-        if(gameState.status == 'init' || gameState.status == 'ended') {
-            throw new Meteor.Error('game-not-started');
-        }
-
-        GameSessions.update({_id: gameState._id}, {$inc: {timeLeft: -(Date.now() - gameState.startTime)}});
     },
     'game.end'() {
         GameSessions.remove({userId: this.userId});
@@ -202,10 +200,7 @@ Meteor.methods({
                     tileHistory: gameState.tileHistory,
                 },
                 $push: {words: tiles},
-                $inc: {
-                    tilesPlayed: tiles.length,
-                    timeLeft: -(Date.now() - gameState.startTime),
-                },
+                $inc: {tilesPlayed: tiles.length},
             });
         }
     },
