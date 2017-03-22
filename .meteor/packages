@@ -26,5 +26,6 @@ reactive-dict@1.1.8
 bojicas:howler2
 artwells:accounts-guest
 check@1.2.5
-random@1.0.10
 aldeed:collection2-core@2.0.0
+random
+http

@@ -1,13 +1,24 @@
+import { Meteor } from 'meteor/meteor';
 import { Template } from 'meteor/templating';
+import { Tracker } from 'meteor/tracker';
+import { Mongo } from 'meteor/mongo';
 import { ReactiveDict } from 'meteor/reactive-dict';
+import { ReactiveVar } from 'meteor/reactive-var';
 
-import './game-page.html';
 import { ReactiveCountdown } from '../../imports/util/ReactiveCountdown.js';
 import { LetterGrid } from '../../imports/letter-grid.js';
 import { GameUtils } from '../../imports/util/game-utils.js';
+import { GameSessions } from '../../imports/api/game.js';
+import { PlayResult } from '../../imports/api/game.js';
+
+import './game-page.html';
 
 Template.GamePage.onCreated(function() {
-    this.gameState = new ReactiveDict();
+    this.gameStatus = new ReactiveVar('loading');
+    this.wordList = new ReactiveVar([]);
+    this.currentScore = new ReactiveVar(0);
+    this.currentWord = new ReactiveVar(null);
+
     this.timer = new ReactiveCountdown(180000, {
         steps: 500,
         interval: 500,
@@ -15,12 +26,47 @@ Template.GamePage.onCreated(function() {
             Template.GamePage.onGameTimeExpired(this);
         },
     });
+
     this.endGame = new ReactiveDict();
+
+    Meteor.subscribe('gameSession');
+
+    Tracker.autorun(() => {
+        const gameState = GameSessions.findOne({}, {words: 1});
+        if(gameState) {
+            const wordList = [];
+            let score = 0;
+            for(let i = gameState.words.length - 1; i >= 0; i--) {
+                const word = GameUtils.collapseWord(gameState.words[i]);
+                score += word.score;
+                wordList.push(word);
+            }
+            this.wordList.set(wordList);
+            this.currentScore.set(score);
+        }
+    });
+
+    Tracker.autorun(() => {
+        const gameState = GameSessions.findOne({}, {status: 1});
+        gameState && this.gameStatus.set(gameState.status);
+    });
 });
 
 Template.GamePage.onRendered(function() {
     this.letterGrid = new LetterGrid(document.getElementById('canvas'), (tiles) => {
-        this.gameState.set('currentWord', GameUtils.collapseWord(tiles));
+        this.currentWord.set(GameUtils.collapseWord(tiles));
+    });
+
+    Tracker.autorun(() => {
+        const result = PlayResult.get();
+        if(result !== null) {
+            if(result) {
+                this.letterGrid.submitWord();
+            } else {
+                this.letterGrid.rejectWord();
+            }
+            PlayResult.set(null);
+        }
     });
 
     const resize = () => {
@@ -50,9 +96,8 @@ Template.GamePage.onRendered(function() {
 });
 
 Template.GamePage.onDestroyed(function() {
-    Meteor.call('game.pause', (error) => {
-        this.timer.stop();
-    });
+    Meteor.call('game.setPaused', true);
+    this.timer.stop();
 });
 
 Template.GamePage.events({
@@ -76,30 +121,8 @@ Template.GamePage.events({
     },
     'click #submit-word'() {
         const instance = Template.instance();
-        instance.gameState.set('currentWord', null);
-
-        const coords = [];
-        for(let i = 0; i < instance.letterGrid.selectedTiles.length; i++) {
-            coords.push(instance.letterGrid.selectedTiles[i].pos);
-        }
-        Meteor.call('game.submitWord', coords, (error, result) => {
-            if(result) {
-                instance.letterGrid.submitWord(instance);
-                Meteor.call('game.refillGrid', (error, result) => {
-                    if(result) {
-                        for(let i = 0; i < result.length; i++) {
-                            instance.letterGrid.tiles[result[i].pos.x].push(result[i]);
-                        }
-                    }
-                });
-
-                const word = GameUtils.collapseWord(instance.letterGrid.selectedTiles);
-                instance.gameState.set('currentScore', instance.gameState.get('currentScore') + word.score);
-                instance.gameState.set('wordHistory', instance.gameState.get('wordHistory').concat([{word: word.word, score: word.score}]));
-            } else {
-                instance.letterGrid.rejectWord(instance);
-            }
-        });
+        Meteor.call('game.playWord', instance.currentWord.get().tiles);
+        instance.currentWord.set(null);
     },
     'click #current-word a'(event) {
         event.preventDefault();
@@ -128,16 +151,16 @@ Template.GamePage.events({
 
 Template.GamePage.helpers({
     currentScore() {
-        return Template.instance().gameState.get('currentScore');
+        return Template.instance().currentScore.get();
     },
     currentWord() {
-        const currentWord = Template.instance().gameState.get('currentWord');
+        const currentWord = Template.instance().currentWord.get();
         if(currentWord) {
             return currentWord.word;
         }
     },
     currentWordScore() {
-        const currentWord = Template.instance().gameState.get('currentWord');
+        const currentWord = Template.instance().currentWord.get();
         if(currentWord) {
            return currentWord.score + ' (' + currentWord.base + '&times;' + currentWord.word.length + ')';
         }
@@ -149,30 +172,28 @@ Template.GamePage.helpers({
         return Math.floor(time / 60) + ':' + ('0' + time % 60).slice(-2);
     },
     submitButtonStatus() {
-        const currentWord = Template.instance().gameState.get('currentWord');
+        const currentWord = Template.instance().currentWord.get();
         if(currentWord) {
             return currentWord.word.length < 2 ? 'disabled' : '';
         }
         return 'disabled';
     },
     clearButtonStatus() {
-        const currentWord = Template.instance().gameState.get('currentWord');
+        const currentWord = Template.instance().currentWord.get();
         if(currentWord) {
             return currentWord.word.length > 0 ? '' : 'hidden';
         }
         return 'hidden';
     },
     pauseButtonStatus() {
-        return Template.instance().gameState.get('status') == 'running' ? '' : 'hidden';
+        return Template.instance().gameStatus.get() == 'running' ? '' : 'hidden';
     },
     wordHistory() {
-        const list = Template.instance().gameState.get('wordHistory');
-        if(list) {
-            return list.reverse();
-        }
+        return Template.instance().wordList.get();
     },
     isGameStarted() {
-        return Template.instance().gameState.get('status') != 'init';
+        const state = Template.instance().gameStatus.get();
+        return state != 'init' && state != 'loading';
     },
     totalPoints() {
         return Template.instance().endGame.get('totalPoints');
@@ -193,19 +214,18 @@ Template.GamePage.helpers({
 });
 
 Template.GamePage.initGame = function(instance) {
-    Meteor.call('game.init', (error, result) => {
+    Meteor.call('game.init', (error) => {
         if(!error) {
-            instance.gameState.set('status', result.started ? 'paused' : 'init');
-            instance.gameState.set('currentScore', result.score);
-            instance.gameState.set('wordHistory', result.words);
-            instance.letterGrid.tiles = result.tiles;
+            const state = GameSessions.findOne({});
+            GameUtils.seedRng(state.seed, state.tilesPlayed);
+            instance.letterGrid.tiles = state.tiles;
+            instance.timer._current = state.timeLeft;
+            instance.timer._dependency.changed();
 
-            if(result.started) {
+            if(state.status == 'running' || state.status == 'paused') {
                 instance.letterGrid.start();
                 instance.letterGrid.isPaused = true;
-                instance.timer._current = result.timeLeft;
-                instance.timer._dependency.changed();
-                if(result.timeLeft <= 0) {
+                if(state.timeLeft <= 0) {
                     Template.GamePage.onGameTimeExpired(instance);
                 }
             }
@@ -214,33 +234,19 @@ Template.GamePage.initGame = function(instance) {
 };
 
 Template.GamePage.startGame = function(instance) {
-    Meteor.call('game.start', (error, result) => {
-        if(!error) {
-            if(instance.letterGrid.isStarted) {
-                instance.letterGrid.isPaused = false;
-            } else {
-                instance.letterGrid.start(true);
-            }
-            instance.gameState.set('status', 'running');
-            instance.timer._current = result.timeLeft;
-            instance.timer._dependency.changed();
-            if(result.timeLeft <= 0) {
-                Template.GamePage.onGameTimeExpired();
-            } else {
-                instance.timer.resume();
-            }
-        }
-    });
+    Meteor.call('game.start');
+    if(instance.letterGrid.isStarted) {
+        instance.letterGrid.isPaused = false;
+    } else {
+        instance.letterGrid.start(true);
+    }
+    instance.timer.resume();
 };
 
 Template.GamePage.pauseGame = function(instance) {
-    Meteor.call('game.pause', (error) => {
-        if(!error) {
-            instance.letterGrid.isPaused = true;
-            instance.gameState.set('status', 'paused');
-            instance.timer.stop();
-        }
-    });
+    Meteor.call('game.setPaused', true);
+    instance.letterGrid.isPaused = true;
+    instance.timer.stop();
 };
 
 Template.GamePage.replayGame = function(instance) {
@@ -262,12 +268,9 @@ Template.GamePage.endGame = function(instance) {
 Template.GamePage.onGameTimeExpired = function(instance) {
     instance.letterGrid.stop();
 
-    const gs = instance.gameState;
-    gs.set('status', 'ended');
+    instance.endGame.set('totalPoints', instance.currentScore.get());
 
-    instance.endGame.set('totalPoints', gs.get('currentScore'));
-
-    const words = gs.get('wordHistory');
+    const words = instance.wordList.get();
     instance.endGame.set('wordsPlayed', words.length);
 
     let bestWord = {word: '(none)', score: 0};

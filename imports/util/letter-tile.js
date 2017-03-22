@@ -1,8 +1,16 @@
-import { Random } from 'meteor/random';
+import Chance from 'chance';
 
 export class LetterTile {
+    static seedRng(seed, skip) {
+        skip = skip || 0;
+        LetterTile.RNG = new Chance(seed);
+        while(skip--) {
+            LetterTile.RNG.integer();
+        }
+    }
+
     static getTile(letter, x, y, initX, initY) {
-        letter = letter || Random.choice(LetterTile.TILE_LIST);
+        letter = letter || LetterTile.RNG.pickone(LetterTile.TILE_LIST);
         if(x === undefined || y === undefined) {
             x = y = 0;
         }
@@ -17,6 +25,8 @@ export class LetterTile {
         };
     }
 }
+
+LetterTile.RNG = new Chance();
 
 LetterTile.LETTER_VALUES = {
     'A': 1,
