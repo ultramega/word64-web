@@ -4,6 +4,7 @@ import { Tracker } from 'meteor/tracker';
 import { Mongo } from 'meteor/mongo';
 import { ReactiveDict } from 'meteor/reactive-dict';
 import { ReactiveVar } from 'meteor/reactive-var';
+import { Cookies } from 'meteor/ostrio:cookies';
 
 import { ReactiveCountdown } from '../../imports/util/ReactiveCountdown.js';
 import { LetterGrid } from '../../imports/letter-grid.js';
@@ -14,6 +15,7 @@ import { PlayResult } from '../../imports/api/game.js';
 import './game-page.html';
 
 Template.GamePage.onCreated(function() {
+    this.gameId = new Cookies().get('gameId');
     this.gameStatus = new ReactiveVar('loading');
     this.wordList = new ReactiveVar([]);
     this.currentScore = new ReactiveVar(0);
@@ -28,8 +30,6 @@ Template.GamePage.onCreated(function() {
     });
 
     this.endGame = new ReactiveDict();
-
-    Meteor.subscribe('gameSession');
 
     Tracker.autorun(() => {
         const gameState = GameSessions.findOne({}, {fields: {words: 1}});
@@ -96,7 +96,7 @@ Template.GamePage.onRendered(function() {
 });
 
 Template.GamePage.onDestroyed(function() {
-    Meteor.call('game.setPaused', true);
+    Meteor.call('game.setPaused', Template.instance().gameId, true);
     this.timer.stop();
 });
 
@@ -121,7 +121,7 @@ Template.GamePage.events({
     },
     'click #submit-word'() {
         const instance = Template.instance();
-        Meteor.call('game.playWord', instance.currentWord.get().tiles);
+        Meteor.call('game.playWord', instance.gameId, instance.currentWord.get().tiles);
         instance.currentWord.set(null);
     },
     'click #current-word a'(event) {
@@ -214,27 +214,32 @@ Template.GamePage.helpers({
 });
 
 Template.GamePage.initGame = function(instance) {
-    Meteor.call('game.init', (error) => {
+    Meteor.call('game.init', instance.gameId, (error, result) => {
         if(!error) {
-            const state = GameSessions.findOne({});
-            GameUtils.seedRng(state.seed, state.tilesPlayed);
-            instance.letterGrid.tiles = state.tiles;
-            instance.timer._current = state.timeLeft;
-            instance.timer._dependency.changed();
+            Meteor.subscribe('gameSession', result, () => {
+                const state = GameSessions.findOne({});
+                GameUtils.seedRng(state.seed, state.tilesPlayed);
+                instance.letterGrid.tiles = state.tiles;
+                instance.timer._current = state.timeLeft;
+                instance.timer._dependency.changed();
 
-            if(state.status == 'running' || state.status == 'paused') {
-                instance.letterGrid.start();
-                instance.letterGrid.isPaused = true;
-                if(state.timeLeft <= 0) {
-                    Template.GamePage.onGameTimeExpired(instance);
+                if(state.status == 'running' || state.status == 'paused') {
+                    instance.letterGrid.start();
+                    instance.letterGrid.isPaused = true;
+                    if(state.timeLeft <= 0) {
+                        Template.GamePage.onGameTimeExpired(instance);
+                    }
                 }
-            }
+            });
+
+            instance.gameId = result;
+            new Cookies().set('gameId', result);
         }
     });
 };
 
 Template.GamePage.startGame = function(instance) {
-    Meteor.call('game.start');
+    Meteor.call('game.start', instance.gameId);
     if(instance.letterGrid.isStarted) {
         instance.letterGrid.isPaused = false;
     } else {
@@ -244,13 +249,13 @@ Template.GamePage.startGame = function(instance) {
 };
 
 Template.GamePage.pauseGame = function(instance) {
-    Meteor.call('game.setPaused', true);
+    Meteor.call('game.setPaused', instance.gameId, true);
     instance.letterGrid.isPaused = true;
     instance.timer.stop();
 };
 
 Template.GamePage.replayGame = function(instance) {
-    Meteor.call('game.replay', (error) => {
+    Meteor.call('game.replay', instance.gameId, (error) => {
         if(!error) {
             Template.GamePage.initGame(instance);
         }
@@ -258,7 +263,7 @@ Template.GamePage.replayGame = function(instance) {
 };
 
 Template.GamePage.endGame = function(instance) {
-    Meteor.call('game.end', (error) => {
+    Meteor.call('game.end', instance.gameId, (error) => {
         if(!error) {
             Template.GamePage.initGame(instance);
         }

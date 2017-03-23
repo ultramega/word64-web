@@ -24,8 +24,7 @@ kadira:blaze-layout
 arillo:flow-router-helpers
 reactive-dict@1.1.8
 bojicas:howler2
-artwells:accounts-guest
 check@1.2.5
 aldeed:collection2-core@2.0.0
-random
 http
+ostrio:cookies

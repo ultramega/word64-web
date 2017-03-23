@@ -29,7 +29,10 @@ const tileSchema = new SimpleSchema({
     initPos: posSchema,
 });
 GameSessions.attachSchema(new SimpleSchema({
-    userId: SimpleSchema.RegEx.Id,
+    userId: {
+        type: SimpleSchema.RegEx.Id,
+        optional: true,
+    },
     status: {
         type: String,
         allowedValues: ['init', 'running', 'paused', 'ended'],
@@ -81,8 +84,8 @@ GameSessions.attachSchema(new SimpleSchema({
 }));
 
 if(Meteor.isServer) {
-    Meteor.publish('gameSession', function() {
-        return GameSessions.find({userId: this.userId}, {fields: {
+    Meteor.publish('gameSession', function(gameId) {
+        return GameSessions.find(gameId, {fields: {
             userId: 1,
             status: 1,
             tiles: 1,
@@ -109,37 +112,42 @@ if(Meteor.isServer) {
 export const PlayResult = new ReactiveVar(null);
 
 Meteor.methods({
-    'game.init'() {
+    'game.init'(gameId) {
         if(Meteor.isClient) {
             return;
         }
-        if(!this.userId) {
-            throw new Meteor.Error('not-authorized');
-        }
 
-        const gameState = GameSessions.findOne({userId: this.userId}, {fields: {status: 1}});
+        const gameState = GameSessions.findOne({$or: [
+            {_id: gameId},
+            {$and: {
+                userId: this.userId,
+                $ne: {userId: null},
+            }},
+        ]}, {fields: {status: 1}});
         if(!gameState) {
             const tiles = [];
             GameUtils.fillGrid(tiles);
-            GameSessions.insert({
+            return GameSessions.insert({
                 userId: this.userId,
                 tiles,
                 seed: Date.now(),
             });
         } else if(gameState.status == 'running') {
-            GameSessions.update({_id: gameState._id}, {$set: {status: 'paused'}});
+            GameSessions.update(gameState._id, {$set: {status: 'paused'}});
         }
+
+        return gameId;
     },
-    'game.start'() {
-        const gameState = GameSessions.findOne({userId: this.userId}, {fields: {_id: 1}});
+    'game.start'(gameId) {
+        const gameState = GameSessions.findOne(gameId, {fields: {_id: 1}});
         if(!gameState) {
             throw new Meteor.Error('invalid-game');
         }
 
         GameSessions.update(gameState._id, {$set: {status: 'running'}});
     },
-    'game.setPaused'(isPaused) {
-        const gameState = GameSessions.findOne({userId: this.userId}, {fields: {
+    'game.setPaused'(gameId, isPaused) {
+        const gameState = GameSessions.findOne(gameId, {fields: {
             started: 1,
             startTime: 1,
         }});
@@ -157,11 +165,11 @@ Meteor.methods({
             GameSessions.update(gameState._id, {$set: {status: 'running'}});
         }
     },
-    'game.end'() {
-        GameSessions.remove({userId: this.userId});
+    'game.end'(gameId) {
+        GameSessions.remove(gameId);
     },
-    'game.playWord'(tiles) {
-        const gameState = GameSessions.findOne({userId: this.userId}, {fields: {
+    'game.playWord'(gameId, tiles) {
+        const gameState = GameSessions.findOne(gameId, {fields: {
             started: 1,
             tiles: 1,
             tileHistory: 1,
@@ -205,8 +213,8 @@ Meteor.methods({
             });
         }
     },
-    'game.replay'() {
-        const gameState = GameSessions.findOne({userId: this.userId}, {fields: {tileHistory: 1}});
+    'game.replay'(gameId) {
+        const gameState = GameSessions.findOne(gameId, {fields: {tileHistory: 1}});
         if(!gameState) {
             throw new Meteor.Error('invalid-game');
         }
