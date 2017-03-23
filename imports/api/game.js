@@ -34,6 +34,10 @@ GameSessions.attachSchema(new SimpleSchema({
         type: SimpleSchema.RegEx.Id,
         optional: true,
     },
+    connectionId: {
+        type: SimpleSchema.RegEx.Id,
+        optional: true,
+    },
     status: {
         type: String,
         allowedValues: ['init', 'running', 'paused', 'ended'],
@@ -101,6 +105,15 @@ if(Meteor.isServer) {
         }});
     });
 
+    Meteor.onConnection(function(connection) {
+        connection.onClose(function() {
+            GameSessions.update({
+                connectionId: connection.id,
+                status: 'running',
+            }, {$set: {status: 'paused'}});
+        });
+    });
+
     const globalTick = function() {
         GameSessions.find({
             status: 'running',
@@ -138,12 +151,15 @@ Meteor.methods({
             GameUtils.fillGrid(tiles);
             return GameSessions.insert({
                 userId: this.userId,
+                connectionId: this.connection.id,
                 tiles,
                 seed: Date.now(),
             });
         } else if(gameState.status == 'running') {
             GameSessions.update(gameState._id, {$set: {status: 'paused'}});
         }
+
+        GameSessions.update(gameState._id, {$set: {connectionId: this.connection.id}});
 
         return gameId;
     },
