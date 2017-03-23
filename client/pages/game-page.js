@@ -32,8 +32,12 @@ Template.GamePage.onCreated(function() {
     this.endGame = new ReactiveDict();
 
     Tracker.autorun(() => {
-        Meteor.subscribe('gameSession', this.gameId.get(), () => {
-            const state = GameSessions.findOne({});
+        const gameId = this.gameId.get();
+        if(!gameId) {
+            return;
+        }
+        Meteor.subscribe('gameSession', gameId, () => {
+            const state = GameSessions.findOne();
             GameUtils.seedRng(state.seed, state.tilesPlayed);
             this.letterGrid.tiles = state.tiles;
             this.timer._current = state.timeLeft;
@@ -234,7 +238,9 @@ Template.GamePage.helpers({
 });
 
 Template.GamePage.initGame = function(instance) {
-    Meteor.call('game.init', instance.gameId.get(), (error, result) => {
+    const gameId = instance.gameId.get();
+    instance.gameId.set(null);
+    Meteor.call('game.init', gameId, (error, result) => {
         if(!error) {
             instance.gameId.set(result);
         }
