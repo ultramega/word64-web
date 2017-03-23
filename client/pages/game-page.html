@@ -3,22 +3,7 @@
         <div class="col-md-8">
             <div id="game-container">
                 <canvas id="canvas"></canvas>
-                {{#unless isGameStarted}}
-                    <button id="start-game" class="btn btn-primary">Start Game</button>
-                {{/unless}}
-            </div>
-        </div>
-        <div class="col-md-4">
-            <span class="timer">{{timer}}</span>
-            <button id="pause-game" class="btn btn-primary btn-sm {{pauseButtonStatus}}" aria-label="Pause"><span class="glyphicon glyphicon-pause"></span></button>
-            <span class="game-score pull-right">{{currentScore}}</span>
-            <div>Word History</div>
-            <div class="list-group" id="word-history">
-                {{#each wordHistory}}
-                    <a href="#" class="list-group-item">{{word}} <span class="badge">{{score}}</span></a>
-                {{else}}
-                    <p class="text-center"><i>No words played</i></p>
-                {{/each}}
+                <button id="start-game" class="btn btn-primary {{startButtonStatus}}">Start Game</button>
             </div>
             <div class="container-fluid" id="game-controls">
                 <div class="row">
@@ -31,6 +16,19 @@
                     <button id="submit-word" class="col-sm-6 btn btn-primary" {{submitButtonStatus}}>Play Word</button>
                     <div class="col-sm-6" id="word-score">{{{currentWordScore}}}</div>
                 </div>
+            </div>
+        </div>
+        <div class="col-md-4" id="game-status">
+            <span class="timer">{{timer}}</span>
+            <button id="pause-game" class="btn btn-primary btn-sm {{pauseButtonStatus}}" aria-label="Pause"><span class="glyphicon glyphicon-pause"></span></button>
+            <span class="game-score pull-right">{{currentScore}}</span>
+            <div>Word History</div>
+            <div class="list-group" id="word-history">
+                {{#each wordHistory}}
+                    <a href="#" class="list-group-item">{{word}} <span class="badge">{{score}}</span></a>
+                {{else}}
+                    <p class="text-center"><i>No words played</i></p>
+                {{/each}}
             </div>
         </div>
     </div>

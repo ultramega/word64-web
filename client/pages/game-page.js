@@ -99,17 +99,22 @@ Template.GamePage.onRendered(function() {
 
         const main = $('main');
         main.css('height', w.height() - (main.offset().top + $('footer').outerHeight()));
+        $('#game-status').css('height', main.height());
 
+        const container = $('#game-container');
         const canvas = $('#canvas');
-        const canvasSize = Math.max(Math.min(main.height(), $('#game-container').width()), 400);
+        const controls = $('#game-controls');
+        const canvasSize = Math.max(Math.min(main.height() - controls.height(), container.width()), 400);
+        container.css('height', canvasSize);
         canvas.attr('height', canvasSize).attr('width', canvasSize);
+        controls.css('margin-left', container.width() - canvasSize);
 
         const history = $('#word-history');
-        history.css('height', canvas.height() - (history.offset().top + $('#game-controls').outerHeight()));
+        history.css('height', main.height() - history.position().top);
 
         const startButton = $('#start-game');
-        startButton.css('top', canvasSize / 2 - startButton.outerHeight() / 2);
-        startButton.css('right', canvasSize / 2 - startButton.outerWidth() / 2);
+        startButton.css('top', canvasSize / 2 - startButton.height() / 2);
+        startButton.css('right', canvasSize / 2 - startButton.width() / 2);
 
         this.letterGrid.onResize(this);
     }
@@ -209,15 +214,14 @@ Template.GamePage.helpers({
         }
         return 'hidden';
     },
+    isGameStarted() {
+        return Template.instance().gameStatus.get() == 'init' ? '' : 'hidden';
+    },
     pauseButtonStatus() {
         return Template.instance().gameStatus.get() == 'running' ? '' : 'hidden';
     },
     wordHistory() {
         return Template.instance().wordList.get();
-    },
-    isGameStarted() {
-        const state = Template.instance().gameStatus.get();
-        return state != 'init';
     },
     totalPoints() {
         return Template.instance().endGame.get('totalPoints');
