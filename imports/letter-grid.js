@@ -179,8 +179,6 @@ export class LetterGrid {
 
     _startFillAnimation() {
         this._fillAnimationActive = true;
-        GameUtils.shiftTiles(this._tiles);
-        GameUtils.fillGrid(this._tiles);
         this._animationStart = Date.now();
         this._invalidate();
     }
@@ -198,6 +196,8 @@ export class LetterGrid {
             col.splice(col.indexOf(tile), 1);
         }
         this._clearAnimationActive = false;
+        GameUtils.shiftTiles(this._tiles);
+        GameUtils.fillGrid(this._tiles);
         this._startFillAnimation();
     }
 
