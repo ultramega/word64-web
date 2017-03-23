@@ -102,7 +102,10 @@ if(Meteor.isServer) {
     });
 
     const globalTick = function() {
-        GameSessions.find({status: 'running'}, {fields: {previousTick: 1}}).forEach(function(doc) {
+        GameSessions.find({
+            status: 'running',
+            timeLeft: {$gt: -1},
+        }, {fields: {previousTick: 1}}).forEach(function(doc) {
             console.log(doc);
             GameSessions.update(doc._id, {
                 $inc: {timeLeft: -(Date.now() - doc.previousTick)},
