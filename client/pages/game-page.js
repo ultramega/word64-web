@@ -217,7 +217,7 @@ Template.GamePage.helpers({
     },
     isGameStarted() {
         const state = Template.instance().gameStatus.get();
-        return state != 'init' && state != 'loading';
+        return state != 'init';
     },
     totalPoints() {
         return Template.instance().endGame.get('totalPoints');
