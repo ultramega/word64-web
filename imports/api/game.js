@@ -1,6 +1,7 @@
 import { Meteor } from 'meteor/meteor';
 import { Mongo } from 'meteor/mongo';
 import { ReactiveVar } from 'meteor/reactive-var';
+import { check } from 'meteor/check'
 
 import SimpleSchema from 'simpl-schema';
 
@@ -85,6 +86,10 @@ GameSessions.attachSchema(new SimpleSchema({
 
 if(Meteor.isServer) {
     Meteor.publish('gameSession', function(gameId) {
+        if(!gameId) {
+            return;
+        }
+        check(gameId, String);
         return GameSessions.find(gameId, {fields: {
             userId: 1,
             status: 1,
@@ -113,6 +118,7 @@ export const PlayResult = new ReactiveVar(null);
 
 Meteor.methods({
     'game.init'(gameId) {
+        check(gameId, Match.Maybe(String));
         if(Meteor.isClient) {
             return;
         }
@@ -139,6 +145,7 @@ Meteor.methods({
         return gameId;
     },
     'game.start'(gameId) {
+        check(gameId, String);
         const gameState = GameSessions.findOne(gameId, {fields: {_id: 1}});
         if(!gameState) {
             throw new Meteor.Error('invalid-game');
@@ -147,6 +154,8 @@ Meteor.methods({
         GameSessions.update(gameState._id, {$set: {status: 'running'}});
     },
     'game.setPaused'(gameId, isPaused) {
+        check(gameId, String);
+        check(isPaused, Boolean);
         const gameState = GameSessions.findOne(gameId, {fields: {
             started: 1,
             startTime: 1,
@@ -166,9 +175,12 @@ Meteor.methods({
         }
     },
     'game.end'(gameId) {
+        check(gameId, String);
         GameSessions.remove(gameId);
     },
     'game.playWord'(gameId, tiles) {
+        check(gameId, String);
+        check(tiles, [Match.ObjectIncluding({pos: Match.ObjectIncluding({x: Number, y: Number})})]);
         const gameState = GameSessions.findOne(gameId, {fields: {
             started: 1,
             tiles: 1,
@@ -214,6 +226,7 @@ Meteor.methods({
         }
     },
     'game.replay'(gameId) {
+        check(gameId, String);
         const gameState = GameSessions.findOne(gameId, {fields: {tileHistory: 1}});
         if(!gameState) {
             throw new Meteor.Error('invalid-game');
