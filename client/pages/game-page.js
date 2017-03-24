@@ -5,6 +5,7 @@ import { Mongo } from 'meteor/mongo';
 import { ReactiveDict } from 'meteor/reactive-dict';
 import { ReactiveVar } from 'meteor/reactive-var';
 import { Cookies } from 'meteor/ostrio:cookies';
+import { Session } from 'meteor/session';
 
 import { ReactiveCountdown } from '../../imports/util/ReactiveCountdown.js';
 import { LetterGrid } from '../../imports/letter-grid.js';
@@ -79,6 +80,10 @@ Template.GamePage.onCreated(function() {
 Template.GamePage.onRendered(function() {
     this.letterGrid = new LetterGrid(document.getElementById('canvas'), (tiles) => {
         this.currentWord.set(GameUtils.collapseWord(tiles));
+    });
+
+    Tracker.autorun(() => {
+        this.letterGrid.enableSound = Session.get('enableSound');
     });
 
     Tracker.autorun(() => {

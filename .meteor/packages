@@ -28,3 +28,4 @@ check@1.2.5
 aldeed:collection2-core@2.0.0
 http
 ostrio:cookies
+session

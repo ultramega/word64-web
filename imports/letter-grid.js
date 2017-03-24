@@ -29,7 +29,6 @@ export class LetterGrid {
 
         this._setSize();
         this._loadBackground();
-        this._loadSounds();
         this._invalidate();
     }
 
@@ -57,6 +56,13 @@ export class LetterGrid {
 
     get isPaused() {
         return !!this._paused;
+    }
+
+    set enableSound(enableSound) {
+        this._enableSound = !!enableSound;
+        if(enableSound) {
+            this._loadSounds();
+        }
     }
 
     start(animate) {
@@ -164,6 +170,9 @@ export class LetterGrid {
     }
 
     _loadSounds() {
+        if(this._sounds) {
+            return;
+        }
         this._sounds = [];
         this._sounds[LetterGrid.SOUND_GAME_START] = new Howl({src: ['snd/game_start.wav']});
         this._sounds[LetterGrid.SOUND_TILE_SELECTED] = new Howl({src: ['snd/tile_selected.wav']});
@@ -172,7 +181,7 @@ export class LetterGrid {
     }
 
     _triggerSound(soundId) {
-        if(this._sounds && this._sounds[soundId]) {
+        if(this._enableSound && this._sounds && this._sounds[soundId]) {
             this._sounds[soundId].play();
         }
     }

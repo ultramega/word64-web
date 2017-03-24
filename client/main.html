@@ -18,12 +18,10 @@
           <li class="{{isActiveRoute 'stats'}}"><a href="{{pathFor 'stats'}}">View Stats</a></li>
         </ul>
         <ul class="nav navbar-nav navbar-right">
-          {{#if currentUser}}
-            {{#if currentUser.profile.enableSound}}
-              <li><a href="#" id="toggle-sound"><span class="glyphicon glyphicon-volume-up" aria-hidden="true"></span></a></li>
-            {{else}}
-              <li><a href="#" id="toggle-sound"><span class="glyphicon glyphicon-volume-off" aria-hidden="true"></span></a></li>
-            {{/if}}
+          {{#if enableSound}}
+            <li><a href="#" id="toggle-sound"><span class="glyphicon glyphicon-volume-up" aria-hidden="true"></span></a></li>
+          {{else}}
+            <li><a href="#" id="toggle-sound"><span class="glyphicon glyphicon-volume-off" aria-hidden="true"></span></a></li>
           {{/if}}
         </ul>
       </div>

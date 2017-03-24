@@ -1,17 +1,26 @@
 import { Meteor } from 'meteor/meteor';
 import { Template } from 'meteor/templating';
+import { Cookies } from 'meteor/ostrio:cookies';
+import { Session } from 'meteor/session';
 
 import '../imports/startup/routes.js';
 
 Meteor.startup(function() {
+    const soundCookie = new Cookies().get('enableSound') === 'true';
+    Session.set('enableSound', soundCookie == null || soundCookie);
 });
 
 Template.MainLayout.events({
     'click #toggle-sound'(event) {
         event.preventDefault();
-        const user = Meteor.user();
-        if(user) {
-            user.update({}, {$set: {enableSound: !user.profile.enableSound}});
-        }
+        const current = Session.get('enableSound');
+        Session.set('enableSound', !current);
+        new Cookies().set('enableSound', !current);
+    },
+});
+
+Template.MainLayout.helpers({
+    enableSound() {
+        return Session.get('enableSound');
     },
 });
