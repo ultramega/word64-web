@@ -163,6 +163,11 @@ Template.GamePage.onRendered(function() {
                 break;
         }
     });
+    $(window).on('blur', () => {
+        if(!this.letterGrid.isPaused) {
+            Template.GamePage.pauseGame(this);
+        }
+    });
 
     Template.GamePage.initGame(this);
 });
@@ -172,6 +177,7 @@ Template.GamePage.onDestroyed(function() {
     this.timer.stop();
 
     $(document).off('keydown');
+    $(window).off('blur');
 });
 
 Template.GamePage.events({
