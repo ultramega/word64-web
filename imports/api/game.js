@@ -119,7 +119,6 @@ if(Meteor.isServer) {
             status: 'running',
             timeLeft: {$gt: -1},
         }, {fields: {previousTick: 1}}).forEach(function(doc) {
-            console.log(doc);
             GameSessions.update(doc._id, {
                 $inc: {timeLeft: -(Date.now() - doc.previousTick)},
                 $set: {previousTick: Date.now()},
