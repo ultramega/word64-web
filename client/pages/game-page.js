@@ -145,26 +145,26 @@ Template.GamePage.onRendered(function() {
                 }
                 break;
             case ' ':
-                if(this.letterGrid.isPaused) {
+                if(this.gameStatus.get() == 'paused') {
                     Template.GamePage.startGame(this);
-                } else {
+                } else if(this.gameStatus.get() == 'running') {
                     Template.GamePage.pauseGame(this);
                 }
                 break;
             case 'Pause':
-                if(!this.letterGrid.isPaused) {
+                if(this.gameStatus.get() == 'running') {
                     Template.GamePage.pauseGame(this);
                 }
                 break;
             case 'Resume':
-                if(this.letterGrid.isPaused) {
+                if(this.gameStatus.get() == 'paused') {
                     Template.GamePage.startGame(this);
                 }
                 break;
         }
     });
     $(window).on('blur', () => {
-        if(!this.letterGrid.isPaused) {
+        if(this.gameStatus.get() == 'running') {
             Template.GamePage.pauseGame(this);
         }
     });
