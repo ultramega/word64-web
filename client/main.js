@@ -6,7 +6,7 @@ import { Session } from 'meteor/session';
 import '../imports/startup/routes.js';
 
 Meteor.startup(function() {
-    const soundCookie = new Cookies().get('enableSound') === 'true';
+    const soundCookie = new Cookies().get('enableSound') !== 'false';
     Session.set('enableSound', soundCookie == null || soundCookie);
 });
 
