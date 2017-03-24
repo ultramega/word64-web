@@ -117,13 +117,15 @@ Template.GamePage.onRendered(function() {
         const history = $('#word-history');
         history.css('height', main.height() - history.position().top);
 
-        const startButton = $('#start-game');
-        startButton.css('top', canvasSize / 2 - startButton.height() / 2);
-        startButton.css('right', canvasSize / 2 - startButton.width() / 2);
+        $('#start-game').css('top', canvasSize / 2 - 34 / 2).css('right', canvasSize / 2 - 99 / 2);
 
         this.letterGrid.onResize(this);
     }
-    $(window).on('resize', resize);
+    $(window).on('resize', resize).on('blur', () => {
+        if(this.gameStatus.get() == 'running') {
+            Template.GamePage.pauseGame(this);
+        }
+    });
     resize();
 
     $(document).on('keydown', (event) => {
@@ -161,11 +163,6 @@ Template.GamePage.onRendered(function() {
                     Template.GamePage.startGame(this);
                 }
                 break;
-        }
-    });
-    $(window).on('blur', () => {
-        if(this.gameStatus.get() == 'running') {
-            Template.GamePage.pauseGame(this);
         }
     });
 
